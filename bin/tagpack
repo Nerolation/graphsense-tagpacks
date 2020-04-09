@@ -19,7 +19,8 @@ def load_config():
 
 
 def show_config(args):
-    if args.list:
+    print(os.path.abspath(CONFIG_FILE))
+    if args.verbose:
         print("BaseURI:", CONFIG['baseURI'])
         print("Entity Taxonomy:", CONFIG['taxonomies']['entity'])
         print("Abuse Taxonomy:", CONFIG['taxonomies']['abuse'])
@@ -45,7 +46,7 @@ def main():
     # parser for config command
     parser_c = subparsers.add_parser("config",
                                      help="get TagPack Repository options")
-    parser_c.add_argument('-l', '--list', action='store_true',
+    parser_c.add_argument('-v', '--verbose', action='store_true',
                           help='show tagpack repository configuration')
     parser_c.set_defaults(func=show_config)
 
