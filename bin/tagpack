@@ -1,0 +1,65 @@
+#!/usr/bin/env python
+
+from argparse import ArgumentParser
+from os import getcwd
+import time
+import sys
+
+from tagpack import __version__ as version
+
+
+BATCH_SIZE_LIMIT = 500
+
+
+def validate(args):
+    print("Called validate with {}".format(args.folders))
+
+
+def ingest(args):
+    print("Called ingest with {}".format(args.folders))
+
+
+def main():
+    parser = ArgumentParser(
+        description='TagPack validation and ingest tool',
+        epilog='GraphSense TagPack Tool v{}- http://graphsense.info'
+        .format(version))
+    parser.add_argument('-v', '--version', action='version', version=version)
+
+    subparsers = parser.add_subparsers(title='Available commands')
+
+    # create parser for ingest command
+    parser_i = subparsers.add_parser("ingest",
+                                     help="Ingest TagPacks into GraphSense")
+    parser_i.add_argument('-f', '--folders', nargs='+', metavar='FOLDER',
+                          default=[getcwd()],
+                          help='TagPacks root folder; default "./"')
+    parser_i.add_argument('-d', '--db_nodes', nargs='+', default='127.0.0.1',
+                          metavar='DB_NODE',
+                          help='list of Cassandra nodes; default "localhost")')
+    parser_i.add_argument('-b', '--batch_size', nargs='?',
+                          default=BATCH_SIZE_LIMIT,
+                          help='batch size for inserting tags into Cassandra)')
+    parser_i.set_defaults(func=ingest)
+
+    # create parser for validate command
+    parser_v = subparsers.add_parser("validate", help="Validate TagPacks")
+    parser_v.add_argument('-f', '--folders', nargs='+', metavar='FOLDER',
+                          default=[getcwd()],
+                          help='TagPacks root folder; default "./"')
+    parser_v.set_defaults(func=validate)
+
+    if len(sys.argv) == 1:
+        parser.print_help(sys.stderr)
+        sys.exit(1)
+
+    args = parser.parse_args()
+    args.func(args)
+
+
+if __name__ == '__main__':
+    if (sys.version_info < (3, 6)):
+        sys.exit("This program requires python version 3.6 or later")
+    t0 = time.time()
+    main()
+    print('Total time:', time.time() - t0)

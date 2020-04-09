@@ -1,0 +1,5 @@
+venv/
+*.sublime*
+*.egg-info
+build/
+dist/

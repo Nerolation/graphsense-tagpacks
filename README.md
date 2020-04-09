@@ -178,9 +178,9 @@ concepts (e.g., Exchange, Marketplace) are defined in the
 * `abuse`: if an address was involved in some abusive behavior, this property's value defines the
 type of abuse and can take values from the [INTERPOL Darkweb and Cryptoassets Abuse Taxonomy][dn-ca].
 
-## tagpack-tool
+## tagpack Tool
 
-The tagpack-tool provides utility functions for validating and ingesting TagPacks
+The tagpack provides utility functions for validating and ingesting TagPacks
 into an [Apache Cassandra database][cassandra], which is required before running
 the [graphsense-transformation](https://github.com/graphsense/graphsense-transformation)
 pipeline.
@@ -189,15 +189,22 @@ It is made available as a Python package.
 
 ### Install from Remote
 
-    pip install tagpack-tool
+    pip install tagpack
 
 ### Local Development Setup
 
-    TODO
+Create and activate a python environment for required dependencies
+
+    python3 -m venv venv
+    . venv/bin/activate
+
+Install project and required dependencies in local environment
+
+    pip install -e .
 
 ### Initialize a TagPack Repository
 
-The tagpack-tool is typically executed from within a folder (a repository) containing
+The tagpack is typically executed from within a folder (a repository) containing
 TagPack files - a so called **TagPack Repository**.
 
 Before commands can be executed, a file `config.yaml` must be present in the path where
@@ -213,25 +220,25 @@ Repository as well as pointers to the taxonomies to be used with this repository
 
 Recursively validate all TagPacks in (a) given folder(s).
 
-    tagpack-tool validate -r <root_folder1> [<root_folder2> ...]
+    tagpack validate -r <root_folder1> [<root_folder2> ...]
 
 ## Ingest a TagPack into a local
 
 Create a `tagpacks` schema in your local Cassandra instance
 
-    tagpack-tool create-keyspace -h <cassandra_host> [-k <keyspace>]
+    tagpack create-keyspace -h <cassandra_host> [-k <keyspace>]
 
 Ingest a single TagPack
 
-    tagpack-tool ingest -h <cassandra_host> [-k <keyspace>] <tagPack_file>
+    tagpack ingest -h <cassandra_host> [-k <keyspace>] <tagPack_file>
 
 Ingest all TagPacks in (a) given folder(s).
 
-    tagpack-tool ingest -h <cassandra_host> [-k <keyspace>] [-r] <root_folder1> [<root_folder2> ...]
+    tagpack ingest -h <cassandra_host> [-k <keyspace>] [-r] <root_folder1> [<root_folder2> ...]
 
 Optionally, you can specific the batch size for tuning ingest performance.
 
-    tagpack-tool ingest -h <cassandra_host> [-k <keyspace>] [-b <batch_size>] [-r] <root_folder1> [<root_folder2> ...]
+    tagpack ingest -h <cassandra_host> [-k <keyspace>] [-b <batch_size>] [-r] <root_folder1> [<root_folder2> ...]
     
 
 ## Collaborative Collection and Sharing TagPacks
