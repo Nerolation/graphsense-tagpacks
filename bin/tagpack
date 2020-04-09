@@ -1,14 +1,28 @@
 #!/usr/bin/env python
-
 from argparse import ArgumentParser
-from os import getcwd
+import os
 import time
 import sys
+import yaml
 
 from tagpack import __version__ as version
+from tagpack.cassandra import BATCH_SIZE_LIMIT
+
+CONFIG_FILE = "config.yaml"
 
 
-BATCH_SIZE_LIMIT = 500
+def load_config():
+    if not os.path.isfile(CONFIG_FILE):
+        sys.exit("This program requires a repository config file in {}"
+                 .format(os.getcwd()))
+    return yaml.safe_load(open(CONFIG_FILE, 'r'))
+
+
+def show_config(args):
+    if args.list:
+        print("BaseURI:", CONFIG['baseURI'])
+        print("Entity Taxonomy:", CONFIG['taxonomies']['entity'])
+        print("Abuse Taxonomy:", CONFIG['taxonomies']['abuse'])
 
 
 def validate(args):
@@ -22,17 +36,24 @@ def ingest(args):
 def main():
     parser = ArgumentParser(
         description='TagPack validation and ingest tool',
-        epilog='GraphSense TagPack Tool v{}- http://graphsense.info'
+        epilog='GraphSense TagPack Tool v{}- https://graphsense.info'
         .format(version))
     parser.add_argument('-v', '--version', action='version', version=version)
 
-    subparsers = parser.add_subparsers(title='Available commands')
+    subparsers = parser.add_subparsers(title='Commands')
 
-    # create parser for ingest command
+    # parser for config command
+    parser_c = subparsers.add_parser("config",
+                                     help="get TagPack Repository options")
+    parser_c.add_argument('-l', '--list', action='store_true',
+                          help='show tagpack repository configuration')
+    parser_c.set_defaults(func=show_config)
+
+    # parser for ingest command
     parser_i = subparsers.add_parser("ingest",
-                                     help="Ingest TagPacks into GraphSense")
+                                     help="ingest TagPacks into GraphSense")
     parser_i.add_argument('-f', '--folders', nargs='+', metavar='FOLDER',
-                          default=[getcwd()],
+                          default=[os.getcwd()],
                           help='TagPacks root folder; default "./"')
     parser_i.add_argument('-d', '--db_nodes', nargs='+', default='127.0.0.1',
                           metavar='DB_NODE',
@@ -42,10 +63,10 @@ def main():
                           help='batch size for inserting tags into Cassandra)')
     parser_i.set_defaults(func=ingest)
 
-    # create parser for validate command
-    parser_v = subparsers.add_parser("validate", help="Validate TagPacks")
+    # parser for validate command
+    parser_v = subparsers.add_parser("validate", help="validate TagPacks")
     parser_v.add_argument('-f', '--folders', nargs='+', metavar='FOLDER',
-                          default=[getcwd()],
+                          default=[os.getcwd()],
                           help='TagPacks root folder; default "./"')
     parser_v.set_defaults(func=validate)
 
@@ -60,6 +81,10 @@ def main():
 if __name__ == '__main__':
     if (sys.version_info < (3, 6)):
         sys.exit("This program requires python version 3.6 or later")
+
+    global CONFIG
+    CONFIG = load_config()
+
     t0 = time.time()
     main()
     print('Total time:', time.time() - t0)
