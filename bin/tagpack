@@ -7,6 +7,7 @@ import yaml
 
 from tagpack import __version__ as version
 from tagpack.cassandra import BATCH_SIZE_LIMIT
+from tagpack.taxonomy import Taxonomy
 
 CONFIG_FILE = "config.yaml"
 
@@ -19,11 +20,22 @@ def load_config():
 
 
 def show_config(args):
-    print(os.path.abspath(CONFIG_FILE))
+    print("Config File:", os.path.abspath(CONFIG_FILE))
     if args.verbose:
         print("BaseURI:", CONFIG['baseURI'])
-        print("Entity Taxonomy:", CONFIG['taxonomies']['entity'])
-        print("Abuse Taxonomy:", CONFIG['taxonomies']['abuse'])
+        print("Taxonomies:")
+        for key, value in CONFIG['taxonomies'].items():
+            print(key, value)
+
+
+def taxonomy(args):
+    key = args.concepts[0]
+    uri = CONFIG['taxonomies'][args.concepts[0]]
+    print("Showing concepts of taxonomy {}".format(key))
+    taxonomy = Taxonomy(key, uri)
+    taxonomy.load_from_remote()
+    for concept in taxonomy.concepts:
+        print(concept)
 
 
 def validate(args):
@@ -43,11 +55,18 @@ def main():
 
     subparsers = parser.add_subparsers(title='Commands')
 
+    # parser for taxonomy command
+    parser_t = subparsers.add_parser("taxonomy",
+                                     help="show taxonomy concepts")
+    parser_t.add_argument('concepts', nargs=1, metavar='TAXONOMY_KEY',
+                          help='fetch and display taxonomy concepts')
+    parser_t.set_defaults(func=taxonomy)
+
     # parser for config command
     parser_c = subparsers.add_parser("config",
-                                     help="get TagPack Repository options")
+                                     help="show TagPack Repository config")
     parser_c.add_argument('-v', '--verbose', action='store_true',
-                          help='show tagpack repository configuration')
+                          help='verbose configuration')
     parser_c.set_defaults(func=show_config)
 
     # parser for ingest command
