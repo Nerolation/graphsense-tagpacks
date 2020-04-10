@@ -34,7 +34,8 @@ setuptools.setup(
     python_requires='>=3.6',
     install_requires=[
         "requests>=2.23.0",
-        "pyyaml>=5.3.1"
+        "pyyaml>=5.3.1",
+        "tabulate>=0.8.7"
     ],
     test_suite="tests"
 )

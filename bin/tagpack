@@ -5,11 +5,38 @@ import time
 import sys
 import yaml
 
+from tabulate import tabulate
+
 from tagpack import __version__ as version
 from tagpack.cassandra import BATCH_SIZE_LIMIT
 from tagpack.taxonomy import Taxonomy
 
 CONFIG_FILE = "config.yaml"
+
+
+def show_taxonomy(args):
+    key = args.taxonomy
+    uri = CONFIG['taxonomies'][key]
+    print("Showing concepts of taxonomy {}".format(key))
+    taxonomy = Taxonomy(key, uri)
+    taxonomy.load_from_remote()
+    if args.verbose:
+        headers = ['Id', 'Label', 'Uri', 'Description']
+        table = [[c.id, c.label, c.uri, c.description]
+                 for c in taxonomy.concepts]
+    else:
+        headers = ['Id', 'Label']
+        table = [[c.id, c.label] for c in taxonomy.concepts]
+
+    print(tabulate(table, headers=headers))
+
+
+def ingest_taxonomy(args):
+    print(args)
+
+
+def taxonomy(args):
+    list_taxonomies()
 
 
 def load_config():
@@ -19,23 +46,17 @@ def load_config():
     return yaml.safe_load(open(CONFIG_FILE, 'r'))
 
 
+def list_taxonomies():
+    print("Taxonomies:")
+    for key, value in CONFIG['taxonomies'].items():
+        print(key, value)
+
+
 def show_config(args):
     print("Config File:", os.path.abspath(CONFIG_FILE))
     if args.verbose:
         print("BaseURI:", CONFIG['baseURI'])
-        print("Taxonomies:")
-        for key, value in CONFIG['taxonomies'].items():
-            print(key, value)
-
-
-def taxonomy(args):
-    key = args.concepts[0]
-    uri = CONFIG['taxonomies'][args.concepts[0]]
-    print("Showing concepts of taxonomy {}".format(key))
-    taxonomy = Taxonomy(key, uri)
-    taxonomy.load_from_remote()
-    for concept in taxonomy.concepts:
-        print(concept)
+        list_taxonomies()
 
 
 def validate(args):
@@ -58,9 +79,24 @@ def main():
     # parser for taxonomy command
     parser_t = subparsers.add_parser("taxonomy",
                                      help="show taxonomy concepts")
-    parser_t.add_argument('concepts', nargs=1, metavar='TAXONOMY_KEY',
+    parser_t.add_argument('taxonomy', nargs='?', metavar='TAXONOMY_KEY',
                           help='fetch and display taxonomy concepts')
     parser_t.set_defaults(func=taxonomy)
+
+    parser_t_subparsers = parser_t.add_subparsers(title='Taxonomy commands')
+
+    # parser for taxonomy ingest command
+    parser_t_i = parser_t_subparsers.add_parser(
+        'ingest', help='ingest taxonomy into GraphSense')
+    parser_t_i.add_argument('-c', '--c', help="Cassandra host")
+    parser_t_i.set_defaults(func=ingest_taxonomy)
+
+    # parser for taxonomy ingest command
+    parser_t_s = parser_t_subparsers.add_parser(
+        'show', help='show taxonomy concepts')
+    parser_t_s.add_argument('-v', '--verbose', action='store_true',
+                            help="verbose concepts")
+    parser_t_s.set_defaults(func=show_taxonomy)
 
     # parser for config command
     parser_c = subparsers.add_parser("config",
