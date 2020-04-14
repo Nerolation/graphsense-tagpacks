@@ -35,6 +35,7 @@ class Cassandra(object):
         self.db_nodes = db_nodes
 
     def connect(self):
+        """Connect to the given Cassandra cluster nodes"""
         print("Connecting to Cassandra cluster @ {}".format(self.db_nodes))
         self.cluster = Cluster(self.db_nodes)
         try:
@@ -44,6 +45,7 @@ class Cassandra(object):
             raise StorageError("Cannot connect to {}".format(self.db_nodes), e)
 
     def execute_query(self, query, keyspace=None):
+        """Execute a query against a given keyspace"""
         if not self.session:
             raise StorageError("Session not availble. Call connect() first")
         try:
@@ -55,12 +57,14 @@ class Cassandra(object):
             raise StorageError("Error when executing {}".format(query), e)
 
     def has_keyspace(self, keyspace):
+        """Check whether a given keyspace is present in the cluster"""
         query = 'SELECT keyspace_name FROM system_schema.keyspaces'
         result = self.execute_query(query)
         keyspaces = [row.keyspace_name for row in result]
         return keyspace in keyspaces
 
     def insert_taxonomy(self, taxonomy, keyspace):
+        """Insert a taxonomy into a given keyspace"""
         print("Inserting taxonomy {} into {} ".format(taxonomy, keyspace))
         query = "INSERT INTO taxonomy JSON '{}';".format(taxonomy.to_json())
         self.execute_query(query, keyspace)
@@ -72,5 +76,6 @@ class Cassandra(object):
             print("Inserted concept {}".format(concept.id))
 
     def close(self):
+        """Closes the cassandra cluster connection"""
         self.cluster.shutdown()
         print("Closed Cassandra cluster connection")
