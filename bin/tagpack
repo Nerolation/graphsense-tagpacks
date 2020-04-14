@@ -8,18 +8,24 @@ import yaml
 from tabulate import tabulate
 
 from tagpack import __version__ as version
-from tagpack.cassandra import BATCH_SIZE_LIMIT
+from tagpack.cassandra import Cassandra, StorageError, BATCH_SIZE_LIMIT
 from tagpack.taxonomy import Taxonomy
 
 CONFIG_FILE = "config.yaml"
 
+DEFAULT_KEYSPACE = "tagpacks"
 
-def show_taxonomy(args):
-    key = args.taxonomy
+
+def remote_load_taxonomy(key):
     uri = CONFIG['taxonomies'][key]
     print("Showing concepts of taxonomy {}".format(key))
     taxonomy = Taxonomy(key, uri)
     taxonomy.load_from_remote()
+    return taxonomy
+
+
+def show_taxonomy(args):
+    taxonomy = remote_load_taxonomy(args.taxonomy)
     if args.verbose:
         headers = ['Id', 'Label', 'Uri', 'Description']
         table = [[c.id, c.label, c.uri, c.description]
@@ -33,6 +39,23 @@ def show_taxonomy(args):
 
 def ingest_taxonomy(args):
     print(args)
+    cassandra = Cassandra(args.db_nodes)
+    try:
+        cassandra.connect()
+
+        if not cassandra.has_keyspace(args.keyspace):
+            print("Keyspace {} does not exist. Please create manually first"
+                  .format(args.keyspace))
+            sys.exit()
+
+        taxonomy = remote_load_taxonomy(args.taxonomy)
+        cassandra.insert_taxonomy(taxonomy, args.keyspace)
+
+    except Exception as e:
+        print(e)
+    finally:
+        cassandra.close()
+        sys.exit()
 
 
 def taxonomy(args):
@@ -88,7 +111,12 @@ def main():
     # parser for taxonomy ingest command
     parser_t_i = parser_t_subparsers.add_parser(
         'ingest', help='ingest taxonomy into GraphSense')
-    parser_t_i.add_argument('-c', '--c', help="Cassandra host")
+    parser_t_i.add_argument('-d', '--db_nodes', nargs='+',
+                            default=['localhost'], metavar='DB_NODE',
+                            help='Cassandra nodes; default "localhost")')
+    parser_t_i.add_argument('-k', '--keyspace', nargs=1,
+                            default=DEFAULT_KEYSPACE, metavar='KEYSPACE',
+                            help="Cassandra keyspace for taxomy tables")
     parser_t_i.set_defaults(func=ingest_taxonomy)
 
     # parser for taxonomy ingest command
@@ -113,7 +141,7 @@ def main():
                           help='TagPacks root folder; default "./"')
     parser_i.add_argument('-d', '--db_nodes', nargs='+', default='127.0.0.1',
                           metavar='DB_NODE',
-                          help='list of Cassandra nodes; default "localhost")')
+                          help='Cassandra nodes; default "localhost")')
     parser_i.add_argument('-b', '--batch_size', nargs='?',
                           default=BATCH_SIZE_LIMIT,
                           help='batch size for inserting tags into Cassandra)')

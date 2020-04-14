@@ -2,6 +2,7 @@
 
 import csv
 from io import StringIO
+import json
 import requests
 
 
@@ -21,6 +22,11 @@ class Concept(object):
         self.uri = uri
         self.label = label
         self.description = description
+
+    def to_json(self):
+        return json.dumps(
+            {'id': self.id, 'uri': self.uri, 'label': self.label,
+             'description': self.description})
 
     def __str__(self):
         s = [str(self.id), str(self.uri), str(self.label),

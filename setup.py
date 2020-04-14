@@ -1,5 +1,5 @@
 import re
-import setuptools
+from setuptools import setup, find_packages
 
 VERSIONFILE = "tagpack/_version.py"
 verfilestr = open(VERSIONFILE, "rt").read()
@@ -15,10 +15,10 @@ else:
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-setuptools.setup(
+setup(
     name="tagpack",
     version=version,
-    packages=['tagpack'],
+    packages=find_packages(),
     scripts=['bin/tagpack'],
     author="Bernhard Haslhofer",
     author_email="bernhard.haslhofer@ait.ac.at",
@@ -35,7 +35,8 @@ setuptools.setup(
     install_requires=[
         "requests>=2.23.0",
         "pyyaml>=5.3.1",
-        "tabulate>=0.8.7"
+        "tabulate>=0.8.7",
+        "cassandra_driver>=3.23.0"
     ],
     test_suite="tests"
 )
