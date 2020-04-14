@@ -8,7 +8,7 @@ import yaml
 from tabulate import tabulate
 
 from tagpack import __version__ as version
-from tagpack.cassandra import Cassandra, StorageError, BATCH_SIZE_LIMIT
+from tagpack.cassandra import Cassandra, BATCH_SIZE_LIMIT
 from tagpack.taxonomy import Taxonomy
 
 CONFIG_FILE = "config.yaml"
@@ -18,13 +18,13 @@ DEFAULT_KEYSPACE = "tagpacks"
 
 def remote_load_taxonomy(key):
     uri = CONFIG['taxonomies'][key]
-    print("Showing concepts of taxonomy {}".format(key))
     taxonomy = Taxonomy(key, uri)
     taxonomy.load_from_remote()
     return taxonomy
 
 
 def show_taxonomy(args):
+    print("Showing concepts of taxonomy {}".format(args.taxonomy))
     taxonomy = remote_load_taxonomy(args.taxonomy)
     if args.verbose:
         headers = ['Id', 'Label', 'Uri', 'Description']
@@ -38,7 +38,6 @@ def show_taxonomy(args):
 
 
 def ingest_taxonomy(args):
-    print(args)
     cassandra = Cassandra(args.db_nodes)
     try:
         cassandra.connect()

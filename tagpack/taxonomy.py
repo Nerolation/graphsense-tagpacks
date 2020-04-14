@@ -17,7 +17,8 @@ class Concept(object):
 
     """
 
-    def __init__(self, id, uri, label, description):
+    def __init__(self, taxonomy, id, uri, label, description):
+        self.taxonomy = taxonomy
         self.id = id
         self.uri = uri
         self.label = label
@@ -25,12 +26,12 @@ class Concept(object):
 
     def to_json(self):
         return json.dumps(
-            {'id': self.id, 'uri': self.uri, 'label': self.label,
-             'description': self.description})
+            {'taxonomy': self.taxonomy.key, 'id': self.id, 'uri': self.uri,
+             'label': self.label, 'description': self.description})
 
     def __str__(self):
-        s = [str(self.id), str(self.uri), str(self.label),
-             str(self.description)]
+        s = [str(self.taxonomy.key), str(self.id), str(self.uri),
+             str(self.label), str(self.description)]
         return "[" + " | ".join(s) + "]"
 
 
@@ -55,6 +56,13 @@ class Taxonomy(object):
         f = StringIO(response.text)
         csv_reader = csv.DictReader(f, delimiter=',')
         for row in csv_reader:
-            concept = Concept(row['id'], row['uri'],
+            concept = Concept(self, row['id'], row['uri'],
                               row['label'], row['description'])
             self.concepts.append(concept)
+
+    def to_json(self):
+        return json.dumps({'key': self.key, 'uri': self.uri})
+
+    def __str__(self):
+        s = [str(self.key), str(self.uri)]
+        return "[" + " | ".join(s) + "]"
