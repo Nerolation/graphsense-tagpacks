@@ -202,7 +202,7 @@ Install project and required dependencies in local environment
 
     pip install -e .
 
-### Initialize a TagPack Repository
+### Configure a TagPack Repository
 
 The tagpack is typically executed from within a folder (a repository) containing
 TagPack files - a so called **TagPack Repository**.
@@ -213,10 +213,29 @@ Repository as well as pointers to the taxonomies to be used with this repository
 
     baseURI: https://github.com/graphsense/graphsense-tagpacks
     taxonomies:
-      - category: https://interpol-innovation-centre.github.io/DW-CC-Taxonomy/assets/data/entities.csv
-      - abuses: https://interpol-innovation-centre.github.io/DW-CC-Taxonomy/assets/data/abuses.csv
+      entity: https://interpol-innovation-centre.github.io/DW-CC-Taxonomy/assets/data/entities.csv
+      abuse: https://interpol-innovation-centre.github.io/DW-CC-Taxonomy/assets/data/abuses.csv
+
+### Handle Referenced Taxonomies (by example)
+
+List configured taxonomy keys and URIs
+
+    tagpack taxonomy
+
+Fetch and show concepts of a specific remote taxonomy (referenced by key)
+
+    tagpack taxonomy abuse show
+
+Ingest concepts from a remote taxonomy into GraphSense
+
+    cqlsh localhost -f cql/tagpack_schema.cql
+    tagpack taxonomy abuse ingest
 
 ### Validate a TagPack
+
+Validate a single TagPack file
+
+    tagpack validate <file>
 
 Recursively validate all TagPacks in (a) given folder(s).
 

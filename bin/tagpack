@@ -10,10 +10,20 @@ from tabulate import tabulate
 from tagpack import __version__ as version
 from tagpack.cassandra import Cassandra, BATCH_SIZE_LIMIT
 from tagpack.taxonomy import Taxonomy
+from tagpack.tagpack import TagPack
+from tagpack.tagpack_schema import TagPackSchema
 
 CONFIG_FILE = "config.yaml"
 
 DEFAULT_KEYSPACE = "tagpacks"
+
+
+def remote_load_taxonomies():
+    taxonomies = {}
+    for key in CONFIG['taxonomies']:
+        taxonomy = remote_load_taxonomy(key)
+        taxonomies[key] = taxonomy
+    return taxonomies
 
 
 def remote_load_taxonomy(key):
@@ -82,7 +92,14 @@ def show_config(args):
 
 
 def validate(args):
-    print("Called validate with {}".format(args.folders))
+    taxonomies = remote_load_taxonomies()
+    for path in args.path:
+        if os.path.isdir(path):
+            print("List all files and then re-apply recursively")
+        else:
+            schema = TagPackSchema()
+            tagPack = TagPack('packs/binance.yaml', schema)
+            schema.validate(tagPack, taxonomies)
 
 
 def ingest(args):
@@ -148,9 +165,11 @@ def main():
 
     # parser for validate command
     parser_v = subparsers.add_parser("validate", help="validate TagPacks")
-    parser_v.add_argument('-f', '--folders', nargs='+', metavar='FOLDER',
+    parser_v.add_argument('path', nargs='+', metavar='PATH',
                           default=[os.getcwd()],
-                          help='TagPacks root folder; default "./"')
+                          help='TagPacks path')
+    parser_v.add_argument('-r', '--recursive', action='store_true',
+                          help='Recursively traverse path')
     parser_v.set_defaults(func=validate)
 
     if len(sys.argv) == 1:

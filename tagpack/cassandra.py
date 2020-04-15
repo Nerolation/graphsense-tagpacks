@@ -66,11 +66,12 @@ class Cassandra(object):
     def insert_taxonomy(self, taxonomy, keyspace):
         """Insert a taxonomy into a given keyspace"""
         print("Inserting taxonomy {} into {} ".format(taxonomy, keyspace))
-        query = "INSERT INTO taxonomy JSON '{}';".format(taxonomy.to_json())
+        query = "INSERT INTO taxonomy_by_key JSON '{}';".format(
+            taxonomy.to_json())
         self.execute_query(query, keyspace)
         for concept in taxonomy.concepts:
             concept_json = concept.to_json()
-            query = "INSERT INTO concept JSON '{}';".format(
+            query = "INSERT INTO concept_by_taxonomy_id JSON '{}';".format(
                 concept_json.replace("'", ""))
             self.execute_query(query, keyspace)
             print("Inserted concept {}".format(concept.id))

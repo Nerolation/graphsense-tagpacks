@@ -51,13 +51,13 @@ CREATE TABLE tag_by_category (
     PRIMARY KEY (category, currency, source, tagpack_uri)
 );
 
-CREATE TABLE taxonomy (
+CREATE TABLE taxonomy_by_key (
     key             text,
     uri             text,
     PRIMARY KEY (key)
 );
 
-CREATE TABLE concept (
+CREATE TABLE concept_by_taxonomy_id (
     taxonomy        text,
     id              text,
     uri             text,

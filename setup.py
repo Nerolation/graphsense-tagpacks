@@ -20,6 +20,7 @@ setup(
     version=version,
     packages=find_packages(),
     scripts=['bin/tagpack'],
+    include_package_data=True,
     author="Bernhard Haslhofer",
     author_email="bernhard.haslhofer@ait.ac.at",
     description="A utility tool for validating and ingesting TagPacks",
