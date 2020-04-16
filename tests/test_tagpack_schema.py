@@ -126,6 +126,14 @@ def test_validate_fail_missing(schema):
     assert "Mandatory field creator missing" in str(e.value)
 
 
+def test_validate_fail_missing_body(schema):
+    tagpack = TagPack('http://example.com',
+                      'tests/testfiles/tagpack_fail_missing_body.yaml', schema)
+    with pytest.raises(ValidationError) as e:
+        schema.validate(tagpack, None)
+    assert "Mandatory field address missing" in str(e.value)
+
+
 def test_validate_ok_taxonomy(schema, taxonomies):
     tagpack = TagPack('http://example.com',
                       'tests/testfiles/tagpack_ok_taxonomy.yaml', schema)
@@ -135,6 +143,15 @@ def test_validate_ok_taxonomy(schema, taxonomies):
 def test_validate_fail_taxonomy(schema, taxonomies):
     tagpack = TagPack('http://example.com',
                       'tests/testfiles/tagpack_fail_taxonomy.yaml', schema)
+    with pytest.raises(ValidationError) as e:
+        schema.validate(tagpack, taxonomies)
+    assert "Undefined concept unknown in field category" in str(e.value)
+
+
+def test_validate_fail_taxonomy_header(schema, taxonomies):
+    tagpack = TagPack('http://example.com',
+                      'tests/testfiles/tagpack_fail_taxonomy_header.yaml',
+                      schema)
     with pytest.raises(ValidationError) as e:
         schema.validate(tagpack, taxonomies)
     assert "Undefined concept unknown in field category" in str(e.value)

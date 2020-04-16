@@ -112,10 +112,19 @@ class TagPackSchema(object):
 
         # iterate over all tags and check types, taxonomy and mandatory use
         for tag in tagpack.tags:
+
+            # check if mandatory tag fields are defined
+            for schema_field in self.mandatory_tag_fields:
+                if schema_field not in tag.fields:
+                    raise ValidationError("Mandatory field {} missing"
+                                          .format(schema_field))
+
             for field, value in tag.fields.items():
                 # check whether field is defined as body field
                 if field not in self.tag_fields:
                     raise ValidationError("Field {} not allowed in tag"
                                           .format(field))
+
+                # check types and taxomomy use
                 self._check_types(field, value)
                 self._check_taxonomies(field, value, taxonomies)
