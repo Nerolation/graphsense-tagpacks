@@ -98,7 +98,7 @@ def validate(args):
             print("List all files and then re-apply recursively")
         else:
             schema = TagPackSchema()
-            tagPack = TagPack('packs/binance.yaml', schema)
+            tagPack = TagPack(CONFIG['baseURI'], 'packs/binance.yaml', schema)
             schema.validate(tagPack, taxonomies)
 
 
