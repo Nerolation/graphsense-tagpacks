@@ -11,13 +11,10 @@ class TagPack(object):
     """Represents a TagPack"""
 
     def __init__(self, baseuri, filename, schema):
-        print("Loading TagPack from {}".format(filename))
         self.baseuri = baseuri
         self.filename = filename
         self.schema = schema
         self.load_tagpack()
-        for tag in self.tags:
-            print(tag.to_json())
 
     def load_tagpack(self):
         if not os.path.isfile(self.filename):
@@ -28,6 +25,10 @@ class TagPack(object):
     @property
     def tagpack_uri(self):
         return self.baseuri + self.filename
+
+    @property
+    def all_fields(self):
+        return self.tagpack
 
     @property
     def header_fields(self):

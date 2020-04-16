@@ -92,6 +92,7 @@ def show_config(args):
 
 
 def validate(args):
+    print("Validating TagPack(s) in {}".format(args.path))
     taxonomies = remote_load_taxonomies()
     for path in args.path:
         if os.path.isdir(path):
