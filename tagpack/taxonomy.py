@@ -60,6 +60,15 @@ class Taxonomy(object):
                               row['label'], row['description'])
             self.concepts.append(concept)
 
+    @property
+    def concept_ids(self):
+        return [concept.id for concept in self.concepts]
+
+    def add_concept(self, concept_id, label, description):
+        concept_uri = self.uri + '/' + concept_id
+        concept = Concept(self, concept_id, concept_uri, label, description)
+        self.concepts.append(concept)
+
     def to_json(self):
         return json.dumps({'key': self.key, 'uri': self.uri})
 

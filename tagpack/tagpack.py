@@ -27,13 +27,8 @@ class TagPack(object):
         return self.baseuri + self.filename
 
     @property
-    def all_fields(self):
-        return self.tagpack
-
-    @property
     def header_fields(self):
-        return {k: v for k, v in self.tagpack.items()
-                if k != 'tags' and k in self.schema.header_fields}
+        return {k: v for k, v in self.tagpack.items()}
 
     @property
     def generic_tag_fields(self):

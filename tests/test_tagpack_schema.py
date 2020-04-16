@@ -2,6 +2,7 @@ import pytest
 
 from tagpack.tagpack_schema import TagPackSchema, ValidationError
 from tagpack.tagpack import TagPack
+from tagpack.taxonomy import Taxonomy
 
 TEST_SCHEMA = 'tests/testfiles/schema_1.yaml'
 
@@ -11,6 +12,20 @@ def schema(monkeypatch):
     monkeypatch.setattr('tagpack.tagpack_schema.TAGPACK_SCHEMA_FILE',
                         TEST_SCHEMA)
     return TagPackSchema()
+
+
+@pytest.fixture
+def taxonomies():
+    tax_entity = Taxonomy('entity', 'http://example.com/entity')
+    tax_entity.add_concept('exchange', 'Exchange', 'Some description')
+
+    tax_abuse = Taxonomy('abuse', 'http://example.com/abuse')
+    tax_abuse.add_concept('bad_coding', 'Bad coding', 'Really bad')
+
+    taxonomies = {}
+    taxonomies['entity'] = tax_entity
+    taxonomies['abuse'] = tax_abuse
+    return taxonomies
 
 
 def test_init(schema):
@@ -62,6 +77,10 @@ def test_field_taxonomy(schema):
     assert schema.field_taxonomy('category') == 'entity'
 
 
+def test_field_no_taxonomy(schema):
+    assert schema.field_taxonomy('title') is None
+
+
 def test_validate(schema):
     tagpack = TagPack('http://example.com',
                       'tests/testfiles/tagpack_ok.yaml', schema)
@@ -105,3 +124,17 @@ def test_validate_fail_missing(schema):
     with pytest.raises(ValidationError) as e:
         schema.validate(tagpack, None)
     assert "Mandatory field creator missing" in str(e.value)
+
+
+def test_validate_ok_taxonomy(schema, taxonomies):
+    tagpack = TagPack('http://example.com',
+                      'tests/testfiles/tagpack_ok_taxonomy.yaml', schema)
+    schema.validate(tagpack, taxonomies)
+
+
+def test_validate_fail_taxonomy(schema, taxonomies):
+    tagpack = TagPack('http://example.com',
+                      'tests/testfiles/tagpack_fail_taxonomy.yaml', schema)
+    with pytest.raises(ValidationError) as e:
+        schema.validate(tagpack, taxonomies)
+    assert "Undefined concept unknown in field category" in str(e.value)
