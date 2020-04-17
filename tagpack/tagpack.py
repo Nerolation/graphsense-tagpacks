@@ -15,6 +15,13 @@ def fields_to_timestamp(d):
     return d
 
 
+class TagPackFileError(Exception):
+    """Class for TagPack file (structure) errors"""
+
+    def __init__(self, message):
+        super().__init__(message)
+
+
 class TagPack(object):
     """Represents a TagPack"""
 
@@ -22,13 +29,19 @@ class TagPack(object):
         self.baseuri = baseuri
         self.filename = filename
         self.schema = schema
-        self.load_tagpack()
+        self.tagpack = self.load_tagpack_from_file()
+        self.check_tag_pack_structure()
 
-    def load_tagpack(self):
+    def load_tagpack_from_file(self):
         if not os.path.isfile(self.filename):
             sys.exit("This program requires {} to be a file"
                      .format(self.filename))
-        self.tagpack = yaml.safe_load(open(self.filename, 'r'))
+        return yaml.safe_load(open(self.filename, 'r'))
+
+    def check_tag_pack_structure(self):
+        self.header_fields
+        self.generic_tag_fields
+        self.tags
 
     @property
     def tagpack_uri(self):
@@ -36,16 +49,25 @@ class TagPack(object):
 
     @property
     def header_fields(self):
-        return {k: v for k, v in self.tagpack.items()}
+        try:
+            return {k: v for k, v in self.tagpack.items()}
+        except AttributeError:
+            raise TagPackFileError("Cannot extract TagPack fields")
 
     @property
     def generic_tag_fields(self):
-        return {k: v for k, v in self.tagpack.items()
-                if k != 'tags' and k in self.schema.tag_fields}
+        try:
+            return {k: v for k, v in self.tagpack.items()
+                    if k != 'tags' and k in self.schema.tag_fields}
+        except AttributeError:
+            raise TagPackFileError("Cannot extract TagPack fields")
 
     @property
     def tags(self):
-        return [Tag(tag, self) for tag in self.tagpack['tags']]
+        try:
+            return [Tag(tag, self) for tag in self.tagpack['tags']]
+        except AttributeError:
+            raise TagPackFileError("Cannot extract TagPack fields")
 
     def __str__(self):
         return str(self.tagpack)
@@ -80,4 +102,4 @@ class Tag(object):
         return json.dumps(tag)
 
     def __str__(self):
-        return str(self.tag)
+        return str(self.fields)

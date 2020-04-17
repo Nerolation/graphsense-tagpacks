@@ -11,38 +11,13 @@ from tabulate import tabulate
 from tagpack import __version__ as version
 from tagpack.cassandra import Cassandra, BATCH_SIZE_LIMIT
 from tagpack.taxonomy import Taxonomy
-from tagpack.tagpack import TagPack
+from tagpack.tagpack import TagPack, TagPackFileError
 from tagpack.tagpack_schema import TagPackSchema, ValidationError
+from tagpack.cmd_utils import print_line, print_info, print_fail, print_success
 
 CONFIG_FILE = "config.yaml"
 
 DEFAULT_KEYSPACE = "tagpacks"
-
-
-class bcolors:
-    HEADER = '\033[1;97m'
-    INFO = '\033[1;97m'
-    OKBLUE = '\033[94m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-
-
-rows, columns = os.popen('stty size', 'r').read().split()
-columns = int(columns)
-
-
-def print_separator(symbol, text, colour=None):
-    left = int((columns - len(text) - 2) / 2)
-    right = columns - left - len(text) - 2
-    if colour:
-        print(f"{colour}", end='')
-    print(symbol * left, text, symbol * right)
-    if colour:
-        print(f"{bcolors.ENDC}", end='')
 
 
 def remote_load_taxonomies():
@@ -132,7 +107,7 @@ def collect_tagpacks(paths):
 
 def validate(args):
     t0 = time.time()
-    print_separator('=', "TagPack validation starts", bcolors.HEADER)
+    print_line("TagPack validation starts")
     print(f"Path: {args.path}")
 
     taxonomies = remote_load_taxonomies()
@@ -143,29 +118,27 @@ def validate(args):
     print(f"Loaded schema: {schema.definition}")
 
     tagpacks = collect_tagpacks(args.path)
-    print(f"{bcolors.INFO}Collected TagPacks: {len(tagpacks)}{bcolors.ENDC}",
-          '\n')
+    print_info(f"Collected TagPacks: {len(tagpacks)}\n")
 
     no_passed = 0
     for tagpack in tagpacks:
         tagPack = TagPack(CONFIG['baseURI'], tagpack, schema)
+        print(f'{tagpack}: ', end='')
         try:
             schema.validate(tagPack, taxonomies)
-            print(f'{tagpack}: {bcolors.OKGREEN}PASSED{bcolors.ENDC}')
+            print_success("PASSED")
             no_passed += 1
-        except ValidationError as e:
-            print(f'{tagpack}: {bcolors.FAIL}FAILED{bcolors.ENDC}', e)
+        except (ValidationError, TagPackFileError) as e:
+            print_fail("FAILED", e)
 
     if no_passed < len(tagpacks):
-        colour = bcolors.FAIL
+        status = 'fail'
     else:
-        colour = bcolors.OKGREEN
+        status = 'success'
 
     duration = round(time.time() - t0, 2)
-    print_separator(
-        '=',
-        f"{no_passed}/{len(tagpacks)} TagPacks passed in {duration}s",
-        colour)
+    print_line(
+        f"{no_passed}/{len(tagpacks)} TagPacks passed in {duration}s", status)
 
 
 def ingest(args):

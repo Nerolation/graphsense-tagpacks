@@ -2,7 +2,7 @@ import datetime
 import pytest
 
 from tagpack.tagpack_schema import TagPackSchema
-from tagpack.tagpack import TagPack, Tag, fields_to_timestamp
+from tagpack.tagpack import TagPack, Tag, fields_to_timestamp, TagPackFileError
 
 
 TEST_SCHEMA = 'tests/testfiles/schema_1.yaml'
@@ -30,6 +30,14 @@ def test_init(tagpack):
     assert tagpack.schema.definition == TEST_SCHEMA
 
 
+def test_init_fail_invalid_file(schema):
+    with pytest.raises(TagPackFileError) as e:
+        TagPack('http://example.com',
+                'tests/testfiles/tagpack_fail_invalid_file.yaml',
+                schema)
+    assert "Cannot extract TagPack fields" in str(e.value)
+
+
 def test_tagpack_uri(tagpack):
     assert tagpack.tagpack_uri == \
         'http://example.com/tests/testfiles/tagpack_fail_taxonomy_header.yaml'
@@ -43,6 +51,12 @@ def test_header_fields(tagpack):
 def test_generic_tag_fields(tagpack):
     assert all(field in tagpack.generic_tag_fields
                for field in ['lastmod'])
+
+
+def test_tagpack_to_str(tagpack):
+    s = tagpack.__str__()
+    assert 'Test TagPack' in s
+    assert 'GraphSense Developer' in s
 
 
 def test_tags(tagpack):
@@ -67,3 +81,22 @@ def test_fields_to_timestamp():
     test_dict = {'lastmod': datetime.date(1970, 1, 2)}
     result = fields_to_timestamp(test_dict)
     assert isinstance(result['lastmod'], int)
+
+
+def test_tag_to_json(tagpack):
+    for tag in tagpack.tags:
+        json = tag.to_json()
+        assert 'tagpack_uri' in json
+        assert 'lastmod' in json
+        assert 'address' in json
+        assert 'label' in json
+
+
+def test_tag_to_str(tagpack):
+    for tag in tagpack.tags:
+        tag_string = tag.__str__()
+        assert '1562104800' in tag_string
+        if tag.fields['address'] == '1bacdeddg32dsfk5692dmn23':
+            assert '1bacdeddg32dsfk5692dmn23' in tag_string
+        elif tag.fields['address'] == '3bacadsfg3sdfafd2deddg32':
+            assert '3bacadsfg3sdfafd2deddg32' in tag_string
