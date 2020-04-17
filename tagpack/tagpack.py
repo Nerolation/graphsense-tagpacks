@@ -7,6 +7,14 @@ import time
 import yaml
 
 
+def fields_to_timestamp(d):
+    """Converts all datetime dict entries to int (timestamp)"""
+    for k, v in d.items():
+        if isinstance(v, datetime.date):
+            d[k] = int(time.mktime(v.timetuple()))
+    return d
+
+
 class TagPack(object):
     """Represents a TagPack"""
 
@@ -24,7 +32,7 @@ class TagPack(object):
 
     @property
     def tagpack_uri(self):
-        return self.baseuri + self.filename
+        return self.baseuri + '/' + self.filename
 
     @property
     def header_fields(self):
@@ -51,27 +59,24 @@ class Tag(object):
         self.tagpack = tagpack
 
     @property
-    def fields(self):
+    def explicit_fields(self):
+        """Return only explicitly defined tag fields"""
         return {k: v for k, v in self.tag.items()}
 
-    def fields_to_timestamp(self, d):
-        """Converts all datetime dict entries to int (timestamp)"""
-        for k, v in d.items():
-            if isinstance(v, datetime.date):
-                d[k] = int(time.mktime(v.timetuple()))
-        return d
-
-    def to_json(self, include_generic=True):
+    @property
+    def fields(self):
+        """Return all tag fields (explicit and generic)"""
         tag = {}
+        for k, v in self.explicit_fields.items():
+            tag[k] = self.tag[k]
+        for k, v in self.tagpack.generic_tag_fields.items():
+            tag[k] = self.tagpack.generic_tag_fields[k]
+        tag = fields_to_timestamp(tag)
+        return tag
+
+    def to_json(self):
+        tag = self.fields
         tag['tagpack_uri'] = self.tagpack.tagpack_uri
-        if include_generic:
-            for k, v in self.fields.items():
-                tag[k] = self.tag[k]
-            for k, v in self.tagpack.generic_tag_fields.items():
-                tag[k] = self.tagpack.generic_tag_fields[k]
-        else:
-            tag = self.tag
-        tag = self.fields_to_timestamp(tag)
         return json.dumps(tag)
 
     def __str__(self):
