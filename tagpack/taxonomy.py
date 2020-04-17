@@ -51,7 +51,6 @@ class Taxonomy(object):
         self.concepts = []
 
     def load_from_remote(self):
-        print("Loading taxonomy {} from {}".format(self.key, self.uri))
         response = requests.get(self.uri)
         f = StringIO(response.text)
         csv_reader = csv.DictReader(f, delimiter=',')

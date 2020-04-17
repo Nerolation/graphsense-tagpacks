@@ -115,7 +115,8 @@ class TagPackSchema(object):
 
             # check if mandatory tag fields are defined
             for schema_field in self.mandatory_tag_fields:
-                if schema_field not in tag.fields:
+                if schema_field not in tag.fields and \
+                   schema_field not in tagpack.generic_tag_fields:
                     raise ValidationError("Mandatory field {} missing"
                                           .format(schema_field))
 

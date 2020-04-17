@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from argparse import ArgumentParser
+import glob
 import os
 import time
 import sys
@@ -11,11 +12,37 @@ from tagpack import __version__ as version
 from tagpack.cassandra import Cassandra, BATCH_SIZE_LIMIT
 from tagpack.taxonomy import Taxonomy
 from tagpack.tagpack import TagPack
-from tagpack.tagpack_schema import TagPackSchema
+from tagpack.tagpack_schema import TagPackSchema, ValidationError
 
 CONFIG_FILE = "config.yaml"
 
 DEFAULT_KEYSPACE = "tagpacks"
+
+
+class bcolors:
+    HEADER = '\033[1;97m'
+    INFO = '\033[1;97m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+
+rows, columns = os.popen('stty size', 'r').read().split()
+columns = int(columns)
+
+
+def print_separator(symbol, text, colour=None):
+    left = int((columns - len(text) - 2) / 2)
+    right = columns - left - len(text) - 2
+    if colour:
+        print(f"{colour}", end='')
+    print(symbol * left, text, symbol * right)
+    if colour:
+        print(f"{bcolors.ENDC}", end='')
 
 
 def remote_load_taxonomies():
@@ -91,16 +118,54 @@ def show_config(args):
         list_taxonomies()
 
 
-def validate(args):
-    print("Validating TagPack(s) in {}".format(args.path))
-    taxonomies = remote_load_taxonomies()
-    for path in args.path:
+def collect_tagpacks(paths):
+    """Collect Tagpack YAML files from given paths"""
+    tagpacks = []
+    for path in paths:
         if os.path.isdir(path):
-            print("List all files and then re-apply recursively")
-        else:
-            schema = TagPackSchema()
-            tagPack = TagPack(CONFIG['baseURI'], 'packs/binance.yaml', schema)
+            files = glob.glob(path + '/**/*.yaml', recursive=True)
+            tagpacks = tagpacks + files
+        elif os.path.isfile(path):
+            tagpacks.append(path)
+    return tagpacks
+
+
+def validate(args):
+    t0 = time.time()
+    print_separator('=', "TagPack validation starts", bcolors.HEADER)
+    print(f"Path: {args.path}")
+
+    taxonomies = remote_load_taxonomies()
+    taxonomy_keys = [key for key in taxonomies.keys()]
+    print(f"Loaded taxonomies: {taxonomy_keys}")
+
+    schema = schema = TagPackSchema()
+    print(f"Loaded schema: {schema.definition}")
+
+    tagpacks = collect_tagpacks(args.path)
+    print(f"{bcolors.INFO}Collected TagPacks: {len(tagpacks)}{bcolors.ENDC}",
+          '\n')
+
+    no_passed = 0
+    for tagpack in tagpacks:
+        tagPack = TagPack(CONFIG['baseURI'], tagpack, schema)
+        try:
             schema.validate(tagPack, taxonomies)
+            print(f'{tagpack}: {bcolors.OKGREEN}PASSED{bcolors.ENDC}')
+            no_passed += 1
+        except ValidationError as e:
+            print(f'{tagpack}: {bcolors.FAIL}FAILED{bcolors.ENDC}', e)
+
+    if no_passed < len(tagpacks):
+        colour = bcolors.FAIL
+    else:
+        colour = bcolors.OKGREEN
+
+    duration = round(time.time() - t0, 2)
+    print_separator(
+        '=',
+        f"{no_passed}/{len(tagpacks)} TagPacks passed in {duration}s",
+        colour)
 
 
 def ingest(args):
@@ -188,6 +253,6 @@ if __name__ == '__main__':
     global CONFIG
     CONFIG = load_config()
 
-    t0 = time.time()
+    # t0 = time.time()
     main()
-    print('Total time:', time.time() - t0)
+    # print('Total time:', time.time() - t0)

@@ -15,6 +15,9 @@
     address:
       type: text
       mandatory: true
+    label:
+      type: text
+      mandatory: true
     lastmod:
       type: datetime
       mandatory: false    

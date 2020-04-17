@@ -155,3 +155,9 @@ def test_validate_fail_taxonomy_header(schema, taxonomies):
     with pytest.raises(ValidationError) as e:
         schema.validate(tagpack, taxonomies)
     assert "Undefined concept unknown in field category" in str(e.value)
+
+
+def test_validate_ok_generic_field(schema, taxonomies):
+    tagpack = TagPack('http://example.com',
+                      'tests/testfiles/tagpack_ok_generic_field.yaml', schema)
+    schema.validate(tagpack, taxonomies)
