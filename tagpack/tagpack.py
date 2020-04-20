@@ -29,33 +29,45 @@ class TagPack(object):
         self.baseuri = baseuri
         self.filename = filename
         self.schema = schema
-        self.tagpack = self.load_tagpack_from_file()
-        self.check_tag_pack_structure()
+        self.tagpack = self._load_tagpack_from_file()
+        self._check_tagpack_structure()
 
-    def load_tagpack_from_file(self):
+    def _load_tagpack_from_file(self):
         if not os.path.isfile(self.filename):
             sys.exit("This program requires {} to be a file"
                      .format(self.filename))
         return yaml.safe_load(open(self.filename, 'r'))
 
-    def check_tag_pack_structure(self):
+    def _check_tagpack_structure(self):
         self.header_fields
         self.generic_tag_fields
         self.tags
 
     @property
     def tagpack_uri(self):
+        """Return's a TagPack's globally unique identifier"""
         return self.baseuri + '/' + self.filename
 
     @property
-    def header_fields(self):
+    def all_header_fields(self):
+        """Returns all TagPack header fields, including generic tag fields"""
         try:
             return {k: v for k, v in self.tagpack.items()}
         except AttributeError:
             raise TagPackFileError("Cannot extract TagPack fields")
 
     @property
+    def header_fields(self):
+        """Returns TagPack header fields that are defined as such"""
+        try:
+            return {k: v for k, v in self.tagpack.items()
+                    if k in self.schema.header_fields}
+        except AttributeError:
+            raise TagPackFileError("Cannot extract TagPack fields")
+
+    @property
     def generic_tag_fields(self):
+        """Returns generic tag fields defined in the TagPack header"""
         try:
             return {k: v for k, v in self.tagpack.items()
                     if k != 'tags' and k in self.schema.tag_fields}
@@ -64,12 +76,23 @@ class TagPack(object):
 
     @property
     def tags(self):
+        """Returns all tags defined in a TagPack's body"""
         try:
             return [Tag(tag, self) for tag in self.tagpack['tags']]
         except AttributeError:
             raise TagPackFileError("Cannot extract TagPack fields")
 
+    def to_json(self):
+        """Returns a JSON representation of a TagPack's header"""
+        tagpack = {}
+        tagpack['uri'] = self.tagpack_uri
+        for k, v in self.header_fields.items():
+            if k != 'tags':
+                tagpack[k] = v
+        return json.dumps(tagpack)
+
     def __str__(self):
+        """Returns a string serialization of the entire TagPack"""
         return str(self.tagpack)
 
 
@@ -97,9 +120,11 @@ class Tag(object):
         return tag
 
     def to_json(self):
+        """Returns a JSON serialization of all tag fields"""
         tag = self.fields
         tag['tagpack_uri'] = self.tagpack.tagpack_uri
         return json.dumps(tag)
 
     def __str__(self):
+        """"Returns a string serialization of a Tag"""
         return str(self.fields)

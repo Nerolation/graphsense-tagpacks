@@ -101,7 +101,7 @@ class TagPackSchema(object):
                                       .format(schema_field))
 
         # check header fields' types, taxonomy and mandatory use
-        for field, value in tagpack.header_fields.items():
+        for field, value in tagpack.all_header_fields.items():
             # check a field is defined
             if field not in self.all_fields:
                 raise ValidationError("Field {} not allowed in header"

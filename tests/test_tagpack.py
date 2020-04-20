@@ -19,14 +19,14 @@ def schema(monkeypatch):
 @pytest.fixture
 def tagpack(schema):
     return TagPack('http://example.com',
-                   'tests/testfiles/tagpack_fail_taxonomy_header.yaml',
+                   TEST_TAGPACK,
                    schema)
 
 
 def test_init(tagpack):
     assert tagpack.baseuri == 'http://example.com'
     assert tagpack.filename == \
-        'tests/testfiles/tagpack_fail_taxonomy_header.yaml'
+        'tests/testfiles/tagpack_ok.yaml'
     assert tagpack.schema.definition == TEST_SCHEMA
 
 
@@ -40,17 +40,30 @@ def test_init_fail_invalid_file(schema):
 
 def test_tagpack_uri(tagpack):
     assert tagpack.tagpack_uri == \
-        'http://example.com/tests/testfiles/tagpack_fail_taxonomy_header.yaml'
+        'http://example.com/tests/testfiles/tagpack_ok.yaml'
+
+
+def test_all_header_fields(tagpack):
+    assert all(field in tagpack.all_header_fields
+               for field in ['title', 'creator', 'lastmod', 'tags'])
 
 
 def test_header_fields(tagpack):
-    assert all(field in tagpack.header_fields
-               for field in ['title', 'creator', 'lastmod', 'tags'])
+    assert all(field in tagpack.all_header_fields
+               for field in ['title', 'creator'])
 
 
 def test_generic_tag_fields(tagpack):
     assert all(field in tagpack.generic_tag_fields
                for field in ['lastmod'])
+
+
+def test_tagpack_to_json(tagpack):
+    json = tagpack.to_json()
+    assert 'uri' in json
+    assert 'title' in json
+    assert 'creator' in json
+    assert 'lastmod' not in json
 
 
 def test_tagpack_to_str(tagpack):

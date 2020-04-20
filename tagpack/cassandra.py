@@ -36,7 +36,6 @@ class Cassandra(object):
 
     def connect(self):
         """Connect to the given Cassandra cluster nodes"""
-        print("Connecting to Cassandra cluster @ {}".format(self.db_nodes))
         self.cluster = Cluster(self.db_nodes)
         try:
             self.session = self.cluster.connect()
@@ -65,7 +64,6 @@ class Cassandra(object):
 
     def insert_taxonomy(self, taxonomy, keyspace):
         """Insert a taxonomy into a given keyspace"""
-        print("Inserting taxonomy {} into {} ".format(taxonomy, keyspace))
         query = "INSERT INTO taxonomy_by_key JSON '{}';".format(
             taxonomy.to_json())
         self.execute_query(query, keyspace)
@@ -75,6 +73,29 @@ class Cassandra(object):
                 concept_json.replace("'", ""))
             self.execute_query(query, keyspace)
             print("Inserted concept {}".format(concept.id))
+
+    def insert_tagpack(self, tagpack, keyspace):
+        """Insert a tagpack into a given keyspace"""
+        if not self.session:
+            raise StorageError("Session not availble. Call connect() first")
+        self.session.set_keyspace(keyspace)
+
+        try:
+            q = f"INSERT INTO tagpack_by_uri JSON '{tagpack.to_json()}'"
+            self.execute_query(q, keyspace)
+
+            for tag in tagpack.tags:
+                self._insert_tag_by_address(tag)
+
+        except Exception as e:
+            raise StorageError(f"Error when inserting tagpack {e}", e)
+
+    def _insert_tag_by_address(self, tag):
+        try:
+            stmt = self.session.prepare("INSERT INTO tag_by_address JSON ?")
+            self.session.execute(stmt, [tag.to_json()])
+        except Exception as e:
+            raise StorageError(f"Error when inserting tag {tag}", e)
 
     def close(self):
         """Closes the cassandra cluster connection"""

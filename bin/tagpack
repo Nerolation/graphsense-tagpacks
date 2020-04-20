@@ -9,7 +9,7 @@ import yaml
 from tabulate import tabulate
 
 from tagpack import __version__ as version
-from tagpack.cassandra import Cassandra, BATCH_SIZE_LIMIT
+from tagpack.cassandra import Cassandra, BATCH_SIZE_LIMIT, StorageError
 from tagpack.taxonomy import Taxonomy
 from tagpack.tagpack import TagPack, TagPackFileError
 from tagpack.tagpack_schema import TagPackSchema, ValidationError
@@ -105,7 +105,7 @@ def collect_tagpacks(paths):
     return tagpacks
 
 
-def validate(args):
+def validate_tagpack(args):
     t0 = time.time()
     print_line("TagPack validation starts")
     print(f"Path: {args.path}")
@@ -141,8 +141,56 @@ def validate(args):
         f"{no_passed}/{len(tagpacks)} TagPacks passed in {duration}s", status)
 
 
-def ingest(args):
-    print("Called ingest with {}".format(args.folders))
+def ingest_tagpack(args):
+    t0 = time.time()
+    print_line("TagPack ingestion starts")
+    print(f"Path: {args.path}")
+
+    print(f"Cassandra nodes: {args.db_nodes}")
+    print(f"Cassandra keyspace: {args.keyspace}")
+    cassandra = Cassandra(args.db_nodes)
+    try:
+        cassandra.connect()
+        if not cassandra.has_keyspace(args.keyspace):
+            print(f"Keyspace {args.keyspace} does not exist. \
+                  Please create manually first")
+            sys.exit()
+    except StorageError as e:
+        print_fail(e)
+        cassandra.close()
+        print_line("Aborted ingest", 'fail')
+        sys.exit()
+
+    schema = schema = TagPackSchema()
+    print(f"Loaded schema: {schema.definition}")
+
+    tagpacks = collect_tagpacks(args.path)
+    print_info(f"Collected TagPacks: {len(tagpacks)}\n")
+
+    no_passed = 0
+    no_tags = 0
+    for tagpack_file in tagpacks:
+        tagpack = TagPack(CONFIG['baseURI'], tagpack_file, schema)
+        print(f'{tagpack_file}: ', end='')
+        try:
+            cassandra.insert_tagpack(tagpack, args.keyspace)
+            print_success(f"INGESTED {len(tagpack.tags)} Tags")
+            no_passed += 1
+            no_tags = no_tags + len(tagpack.tags)
+        except StorageError as e:
+            print_fail("FAILED", e)
+
+    cassandra.close()
+
+    if no_passed < len(tagpacks):
+        status = 'fail'
+    else:
+        status = 'success'
+
+    duration = round(time.time() - t0, 2)
+    print_line(
+        f"Ingested {no_passed}/{len(tagpacks)} TagPacks with \
+        {no_tags} in {duration}s", status)
 
 
 def main():
@@ -169,9 +217,9 @@ def main():
     parser_t_i.add_argument('-d', '--db_nodes', nargs='+',
                             default=['localhost'], metavar='DB_NODE',
                             help='Cassandra nodes; default "localhost")')
-    parser_t_i.add_argument('-k', '--keyspace', nargs=1,
+    parser_t_i.add_argument('-k', '--keyspace',
                             default=DEFAULT_KEYSPACE, metavar='KEYSPACE',
-                            help="Cassandra keyspace for taxomy tables")
+                            help="Cassandra keyspace for taxonomy tables")
     parser_t_i.set_defaults(func=ingest_taxonomy)
 
     # parser for taxonomy show command
@@ -193,25 +241,26 @@ def main():
     # parser for ingest command
     parser_i = subparsers.add_parser("ingest",
                                      help="ingest TagPacks into GraphSense")
-    parser_i.add_argument('-f', '--folders', nargs='+', metavar='FOLDER',
+    parser_i.add_argument('path', nargs='+', metavar='PATH',
                           default=[os.getcwd()],
-                          help='TagPacks root folder; default "./"')
-    parser_i.add_argument('-d', '--db_nodes', nargs='+', default='127.0.0.1',
-                          metavar='DB_NODE',
+                          help='TagPacks file or folder root path')
+    parser_i.add_argument('-d', '--db_nodes', nargs='+',
+                          default=['localhost'], metavar='DB_NODE',
                           help='Cassandra nodes; default "localhost")')
+    parser_i.add_argument('-k', '--keyspace',
+                          default=DEFAULT_KEYSPACE, metavar='KEYSPACE',
+                          help="Cassandra keyspace for taxonomy tables")
     parser_i.add_argument('-b', '--batch_size', nargs='?',
                           default=BATCH_SIZE_LIMIT,
                           help='batch size for inserting tags into Cassandra)')
-    parser_i.set_defaults(func=ingest)
+    parser_i.set_defaults(func=ingest_tagpack)
 
     # parser for validate command
     parser_v = subparsers.add_parser("validate", help="validate TagPacks")
     parser_v.add_argument('path', nargs='+', metavar='PATH',
                           default=[os.getcwd()],
-                          help='TagPacks path')
-    parser_v.add_argument('-r', '--recursive', action='store_true',
-                          help='Recursively traverse path')
-    parser_v.set_defaults(func=validate)
+                          help='TagPacks file or folder root path')
+    parser_v.set_defaults(func=validate_tagpack)
 
     if len(sys.argv) == 1:
         parser.print_help(sys.stderr)
