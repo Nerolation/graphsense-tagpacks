@@ -126,4 +126,3 @@ class Cassandra(object):
     def close(self):
         """Closes the cassandra cluster connection"""
         self.cluster.shutdown()
-        print("Closed Cassandra cluster connection")

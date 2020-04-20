@@ -35,8 +35,20 @@ def remote_load_taxonomy(key):
     return taxonomy
 
 
-def show_taxonomy(args):
-    print("Showing concepts of taxonomy {}".format(args.taxonomy))
+def list_taxonomies(args=None):
+    print_line("Show configured taxonomies")
+    print(f"Configuration: {CONFIG_FILE}\n")
+    count = 0
+    for key, value in CONFIG['taxonomies'].items():
+        print_info(key, end='\t| ')
+        print(value)
+        count += 1
+    print_line(f"{count} configured taxonomies", 'success')
+
+
+def show_taxonomy_concepts(args):
+    print_line("Showing concepts of taxonomy {}".format(args.taxonomy))
+    print("Remote URI: ", CONFIG['taxonomies'][args.taxonomy], "\n")
     taxonomy = remote_load_taxonomy(args.taxonomy)
     if args.verbose:
         headers = ['Id', 'Label', 'Uri', 'Description']
@@ -47,30 +59,38 @@ def show_taxonomy(args):
         table = [[c.id, c.label] for c in taxonomy.concepts]
 
     print(tabulate(table, headers=headers))
+    print_line(f"{len(taxonomy.concepts)} taxonomy concepts", 'success')
 
 
 def ingest_taxonomy(args):
+    t0 = time.time()
+    print_line("Taxonomy ingestion starts")
+    print(f"Taxonomy: {args.taxonomy}")
+
+    print(f"Cassandra nodes: {args.db_nodes}")
+    print(f"Cassandra keyspace: {args.keyspace}\n")
+
     cassandra = Cassandra(args.db_nodes)
     try:
         cassandra.connect()
-
         if not cassandra.has_keyspace(args.keyspace):
-            print("Keyspace {} does not exist. Please create manually first"
-                  .format(args.keyspace))
+            print(f"Keyspace {args.keyspace} does not exist. \
+                  Please create manually first")
             sys.exit()
 
         taxonomy = remote_load_taxonomy(args.taxonomy)
         cassandra.insert_taxonomy(taxonomy, args.keyspace)
 
-    except Exception as e:
-        print(e)
+        duration = round(time.time() - t0, 2)
+        print_line(
+            f"Inserted {len(taxonomy.concepts)} concepts in {duration}s",
+            'success')
+    except StorageError as e:
+        print_fail(e)
+        print_line("Aborted ingest", 'fail')
     finally:
         cassandra.close()
         sys.exit()
-
-
-def taxonomy(args):
-    list_taxonomies()
 
 
 def load_config():
@@ -78,12 +98,6 @@ def load_config():
         sys.exit("This program requires a repository config file in {}"
                  .format(os.getcwd()))
     return yaml.safe_load(open(CONFIG_FILE, 'r'))
-
-
-def list_taxonomies():
-    print("Taxonomies:")
-    for key, value in CONFIG['taxonomies'].items():
-        print(key, value)
 
 
 def show_config(args):
@@ -193,19 +207,24 @@ def ingest_tagpack(args):
         .format(no_passed, len(tagpacks), no_tags, duration), status)
 
 
+def show_version():
+    return "TagPack management tool v" + version
+
+
 def main():
     parser = ArgumentParser(
         description='TagPack validation and ingest tool',
         epilog='GraphSense TagPack Tool v{}- https://graphsense.info'
         .format(version))
-    parser.add_argument('-v', '--version', action='version', version=version)
+    parser.add_argument('-v', '--version', action='version',
+                        version=show_version())
 
     subparsers = parser.add_subparsers(title='Commands')
 
     # parser for taxonomy command
     parser_t = subparsers.add_parser("taxonomy",
                                      help="show taxonomy concepts")
-    parser_t.set_defaults(func=taxonomy)
+    parser_t.set_defaults(func=list_taxonomies)
 
     parser_t_subparsers = parser_t.add_subparsers(title='Taxonomy commands')
 
@@ -229,7 +248,7 @@ def main():
                             help='the selected taxonomy')
     parser_t_s.add_argument('-v', '--verbose', action='store_true',
                             help="verbose concepts")
-    parser_t_s.set_defaults(func=show_taxonomy)
+    parser_t_s.set_defaults(func=show_taxonomy_concepts)
 
     # parser for config command
     parser_c = subparsers.add_parser("config",

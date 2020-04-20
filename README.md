@@ -178,7 +178,7 @@ concepts (e.g., Exchange, Marketplace) are defined in the
 * `abuse`: if an address was involved in some abusive behavior, this property's value defines the
 type of abuse and can take values from the [INTERPOL Darkweb and Cryptoassets Abuse Taxonomy][dn-ca].
 
-## tagpack Tool
+## TagPack Management Tool
 
 The tagpack provides utility functions for validating and ingesting TagPacks
 into an [Apache Cassandra database][cassandra], which is required before running

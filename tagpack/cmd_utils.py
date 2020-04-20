@@ -38,8 +38,8 @@ def print_line(text, status=None):
     print_separator('=', text, colour)
 
 
-def print_info(text):
-    print(f"{bcolors.INFO}{text}{bcolors.ENDC}")
+def print_info(text, **args):
+    print(f"{bcolors.INFO}{text}{bcolors.ENDC}", **args)
 
 
 def print_success(text):
