@@ -157,8 +157,6 @@ def main():
     # parser for taxonomy command
     parser_t = subparsers.add_parser("taxonomy",
                                      help="show taxonomy concepts")
-    parser_t.add_argument('taxonomy', nargs='?', metavar='TAXONOMY_KEY',
-                          help='fetch and display taxonomy concepts')
     parser_t.set_defaults(func=taxonomy)
 
     parser_t_subparsers = parser_t.add_subparsers(title='Taxonomy commands')
@@ -166,6 +164,8 @@ def main():
     # parser for taxonomy ingest command
     parser_t_i = parser_t_subparsers.add_parser(
         'ingest', help='ingest taxonomy into GraphSense')
+    parser_t_i.add_argument('taxonomy', metavar='TAXONOMY_KEY',
+                            help='the selected taxonomy')
     parser_t_i.add_argument('-d', '--db_nodes', nargs='+',
                             default=['localhost'], metavar='DB_NODE',
                             help='Cassandra nodes; default "localhost")')
@@ -174,9 +174,11 @@ def main():
                             help="Cassandra keyspace for taxomy tables")
     parser_t_i.set_defaults(func=ingest_taxonomy)
 
-    # parser for taxonomy ingest command
+    # parser for taxonomy show command
     parser_t_s = parser_t_subparsers.add_parser(
         'show', help='show taxonomy concepts')
+    parser_t_s.add_argument('taxonomy', metavar='TAXONOMY_KEY',
+                            help='the selected taxonomy')
     parser_t_s.add_argument('-v', '--verbose', action='store_true',
                             help="verbose concepts")
     parser_t_s.set_defaults(func=show_taxonomy)
