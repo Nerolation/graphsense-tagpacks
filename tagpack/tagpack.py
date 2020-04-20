@@ -36,12 +36,14 @@ class TagPack(object):
         if not os.path.isfile(self.filename):
             sys.exit("This program requires {} to be a file"
                      .format(self.filename))
-        return yaml.safe_load(open(self.filename, 'r'))
+        file = yaml.safe_load(open(self.filename, 'r'))
+        return file
 
     def _check_tagpack_structure(self):
         self.header_fields
         self.generic_tag_fields
-        self.tags
+        if self.tagpack.get('tags') is None:
+            raise TagPackFileError('Mandatory tags field is missing')
 
     @property
     def tagpack_uri(self):

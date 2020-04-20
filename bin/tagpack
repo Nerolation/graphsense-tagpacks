@@ -9,7 +9,7 @@ import yaml
 from tabulate import tabulate
 
 from tagpack import __version__ as version
-from tagpack.cassandra import Cassandra, BATCH_SIZE_LIMIT, StorageError
+from tagpack.cassandra import Cassandra, CONCURRENCY, StorageError
 from tagpack.taxonomy import Taxonomy
 from tagpack.tagpack import TagPack, TagPackFileError
 from tagpack.tagpack_schema import TagPackSchema, ValidationError
@@ -173,7 +173,7 @@ def ingest_tagpack(args):
         tagpack = TagPack(CONFIG['baseURI'], tagpack_file, schema)
         print(f'{tagpack_file}: ', end='')
         try:
-            cassandra.insert_tagpack(tagpack, args.keyspace)
+            cassandra.insert_tagpack(tagpack, args.keyspace, args.concurrency)
             print_success(f"INGESTED {len(tagpack.tags)} Tags")
             no_passed += 1
             no_tags = no_tags + len(tagpack.tags)
@@ -189,8 +189,8 @@ def ingest_tagpack(args):
 
     duration = round(time.time() - t0, 2)
     print_line(
-        f"Ingested {no_passed}/{len(tagpacks)} TagPacks with \
-        {no_tags} in {duration}s", status)
+        "Ingested {}/{} TagPacks with {} Tags in {}s"
+        .format(no_passed, len(tagpacks), no_tags, duration), status)
 
 
 def main():
@@ -250,9 +250,9 @@ def main():
     parser_i.add_argument('-k', '--keyspace',
                           default=DEFAULT_KEYSPACE, metavar='KEYSPACE',
                           help="Cassandra keyspace for taxonomy tables")
-    parser_i.add_argument('-b', '--batch_size', nargs='?',
-                          default=BATCH_SIZE_LIMIT,
-                          help='batch size for inserting tags into Cassandra)')
+    parser_i.add_argument('-c', '--concurrency', nargs='?', type=int,
+                          default=CONCURRENCY,
+                          help='Concurrent execution threshold)')
     parser_i.set_defaults(func=ingest_tagpack)
 
     # parser for validate command

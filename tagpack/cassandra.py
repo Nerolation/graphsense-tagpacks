@@ -1,9 +1,15 @@
 """Cassandra - Handles ingest into cassandra"""
+import json
+import re
+
 from cassandra.cluster import Cluster
+from cassandra.concurrent import execute_concurrent
 
 
-BATCH_SIZE_LIMIT = 500
+CONCURRENCY = 100
 DEFAULT_TIMEOUT = 60
+
+LABEL_NORM_PATTERN = re.compile(r'[\W_]+', re.UNICODE)
 
 
 class StorageError(Exception):
@@ -74,28 +80,48 @@ class Cassandra(object):
             self.execute_query(query, keyspace)
             print("Inserted concept {}".format(concept.id))
 
-    def insert_tagpack(self, tagpack, keyspace):
+    def _add_normalized_label(self, tag_json):
+        """Enrich JSON Tag representation by normalized labels"""
+        # Alphanumeric and lowercase only
+        d = json.loads(tag_json)
+        label = d['label']
+        d['label_norm'] = LABEL_NORM_PATTERN.sub('', label).lower()
+        d['label_norm_prefix'] = d['label_norm'][:3]
+        return json.dumps(d)
+
+    def insert_tagpack(self, tagpack, keyspace, concurrency):
         """Insert a tagpack into a given keyspace"""
         if not self.session:
             raise StorageError("Session not availble. Call connect() first")
         self.session.set_keyspace(keyspace)
 
-        try:
-            q = f"INSERT INTO tagpack_by_uri JSON '{tagpack.to_json()}'"
-            self.execute_query(q, keyspace)
+        q = f"INSERT INTO tagpack_by_uri JSON '{tagpack.to_json()}'"
+        self.execute_query(q, keyspace)
 
-            for tag in tagpack.tags:
-                self._insert_tag_by_address(tag)
+        stmt_1 = self.session.prepare("INSERT INTO tag_by_address JSON ?")
+        stmt_2 = self.session.prepare("INSERT INTO tag_by_category JSON ?")
+        stmt_3 = self.session.prepare("INSERT INTO tag_by_label JSON ?")
 
-        except Exception as e:
-            raise StorageError(f"Error when inserting tagpack {e}", e)
+        statements_and_params = []
+        for tag in tagpack.tags:
+            # prepare statements for table tag_by_address
+            params = (tag.to_json(), )
+            statements_and_params.append((stmt_1, params))
+            # prepare statements for table tag_by_category
+            if 'category' in tag.fields.keys():
+                statements_and_params.append((stmt_2, params))
+            # prepare statements for table tag_by_label
+            tag_w_norm_labels = self._add_normalized_label(tag.to_json())
+            params = (tag_w_norm_labels, )
+            statements_and_params.append((stmt_3, params))
 
-    def _insert_tag_by_address(self, tag):
-        try:
-            stmt = self.session.prepare("INSERT INTO tag_by_address JSON ?")
-            self.session.execute(stmt, [tag.to_json()])
-        except Exception as e:
-            raise StorageError(f"Error when inserting tag {tag}", e)
+        results = execute_concurrent(self.session, statements_and_params,
+                                     concurrency=concurrency,
+                                     raise_on_first_error=True)
+        for (success, result) in results:
+            if not success:
+                raise StorageError(
+                    f"Error when inserting tagpack {tagpack.filename}")
 
     def close(self):
         """Closes the cassandra cluster connection"""
