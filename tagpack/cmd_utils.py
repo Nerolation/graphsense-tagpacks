@@ -42,11 +42,9 @@ def print_info(text, **args):
     print(f"{bcolors.INFO}{text}{bcolors.ENDC}", **args)
 
 
-def print_success(text):
+def print_success(text, **args):
     print(f"{bcolors.OKGREEN}{text}{bcolors.ENDC}")
 
 
 def print_fail(text, exception):
     print(f"{bcolors.FAIL}{text}{bcolors.ENDC}", exception)
-
-

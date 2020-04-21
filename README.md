@@ -1,11 +1,11 @@
 # GraphSense TagPacks
 
 A TagPack is a collection of cryptoasset attribution tags with associated
-provenance and categorization metadata. This repository provides
+provenance and categorization metadata. This repository
 
-* a common structure (schema) for TagPacks
+* defines a common structure (schema) for TagPacks
+* provides a curated collecting of TagPacks collect from public sources
 * a tool for validating and ingesting TagPacks into [Apache Cassandra][cassandra]
-* a curated Git infrastructure for collaboratively collecting TagPacks from public sources
 
 ## TagPack
 
@@ -76,23 +76,46 @@ example, `label`, `address`, and `source` are mandatory properties as they
 describes where a certain piece of information is coming from (either in the form
 of a URI or a textual description).
 
-The range of defined properties is defined in `TODO: point to location` and looks
+The range of defined properties is defined in `tagpack/conf/tagpack_schema.yaml` and looks
 like this:
 
     header:
-      - title
-      - creator
-      - description
-      - tags
-    body:
-      - tag:
-          - address
-          - label
-          - source
-          - currency
-          - category
-          - lastmod
-          - abuse
+      title:
+        type: text
+        mandatory: true
+      creator:
+        type: text
+        mandatory: true
+      description:
+        type: text
+        mandatory: false
+      tags:
+        type: list
+        mandatory: true
+    tag:
+      address:
+        type: text
+        mandatory: true
+      label:
+        type: text
+        mandatory: true
+      source:
+        type: text
+        mandatory: true    
+      currency:
+        type: text
+        mandatory: true    
+      lastmod:
+        type: datetime
+        mandatory: false    
+      category:
+        type: text
+        mandatory: false
+        taxonomy: entity
+      abuse:
+        type: text
+        mandatory: false
+        taxonomy: abuse
 
 #### Property inheritance
 
@@ -173,94 +196,24 @@ agreed upon taxonomies as values:
 
 * `category`: defines the type of real-world entity that is control of a given address. Possible
 concepts (e.g., Exchange, Marketplace) are defined in the
-[INTERPOL Darkweb and Cryptoassets Entity Taxonomy][dn-ca].
+[INTERPOL Darkweb and Cryptoassets Entity Taxonomy][dw-va].
 
 * `abuse`: if an address was involved in some abusive behavior, this property's value defines the
-type of abuse and can take values from the [INTERPOL Darkweb and Cryptoassets Abuse Taxonomy][dn-ca].
+type of abuse and can take values from the [INTERPOL Darkweb and Cryptoassets Abuse Taxonomy][dw-va].
 
-## TagPack Management Tool
+#### TagPack Repository Configuration
 
-The tagpack provides utility functions for validating and ingesting TagPacks
-into an [Apache Cassandra database][cassandra], which is required before running
-the [graphsense-transformation](https://github.com/graphsense/graphsense-transformation)
-pipeline.
+TagPacks are stored in some Git repository - a so called **TagPack Repository**.
 
-It is made available as a Python package.
-
-### Install from Remote
-
-    pip install tagpack
-
-### Local Development Setup
-
-Create and activate a python environment for required dependencies
-
-    python3 -m venv venv
-    . venv/bin/activate
-
-Install project and required dependencies in local environment
-
-    pip install -e .
-
-### Configure a TagPack Repository
-
-The tagpack is typically executed from within a folder (a repository) containing
-TagPack files - a so called **TagPack Repository**.
-
-Before commands can be executed, a file `config.yaml` must be present in the path where
-the tool is executed. It must define the `baseURI` (e.g., the Git URI) of this TagPack
-Repository as well as pointers to the taxonomies to be used with this repository.
+Each TagPack repository must have a file `config.yaml`, which defines the TagPacks'
+`baseURI` as well as pointers to used taxonomies.
 
     baseURI: https://github.com/graphsense/graphsense-tagpacks
     taxonomies:
       entity: https://interpol-innovation-centre.github.io/DW-CC-Taxonomy/assets/data/entities.csv
       abuse: https://interpol-innovation-centre.github.io/DW-CC-Taxonomy/assets/data/abuses.csv
 
-### Handle Referenced Taxonomies (by example)
-
-List configured taxonomy keys and URIs
-
-    tagpack taxonomy
-
-Fetch and show concepts of a specific remote taxonomy (referenced by key)
-
-    tagpack taxonomy abuse show
-
-Ingest concepts from a remote taxonomy into GraphSense
-
-    cqlsh localhost -f cql/tagpack_schema.cql
-    tagpack taxonomy abuse ingest
-
-### Validate a TagPack
-
-Validate a single TagPack file
-
-    tagpack validate <file>
-
-Recursively validate all TagPacks in (a) given folder(s).
-
-    tagpack validate -r <root_folder1> [<root_folder2> ...]
-
-## Ingest a TagPack into a local
-
-Create a `tagpacks` schema in your local Cassandra instance
-
-    tagpack create-keyspace -h <cassandra_host> [-k <keyspace>]
-
-Ingest a single TagPack
-
-    tagpack ingest -h <cassandra_host> [-k <keyspace>] <tagPack_file>
-
-Ingest all TagPacks in (a) given folder(s).
-
-    tagpack ingest -h <cassandra_host> [-k <keyspace>] [-r] <root_folder1> [<root_folder2> ...]
-
-Optionally, you can specific the batch size for tuning ingest performance.
-
-    tagpack ingest -h <cassandra_host> [-k <keyspace>] [-b <batch_size>] [-r] <root_folder1> [<root_folder2> ...]
-    
-
-## Collaborative Collection and Sharing TagPacks
+#### Collaborative Collection and Sharing TagPacks
 
 This repository also provides a curated collection of TagPacks, which have been
 collected from **public sources** either by the GraphSense team or from other
@@ -278,19 +231,88 @@ If someone wants to create TagPacks not fulfilling these criteria, it is of cour
 possible to store them privately, e.g., on the local filesystem or a local
 Git instance.
 
-### How can I contribute TagPacks to this repository?
+#### How can I contribute TagPacks to this repository?
 
 **Step 1**: [Fork](https://help.github.com/en/articles/fork-a-repo) this repository
 
 **Step 2**: Add your TagPacks to the folder `packs`
 
-**Step 3**: Validate your TagPack
+**Step 3**: Validate your TagPack using the TagPack Management Tool (see below)
 
 **Step 4**: Contribute them to GraphSense public TagPack collection by submitting a [pull request](https://help.github.com/en/articles/about-pull-requests)
 
 
+## TagPack Management Tool
+
+The TagPack management tools supports validation of TagPacks and ingestion into
+an [Apache Cassandra database][cassandra], which is required before running
+the [graphsense-transformation](https://github.com/graphsense/graphsense-transformation)
+pipeline.
+
+It is made available as a Python package.
+
+### Local Installation
+
+Create and activate a python environment for required dependencies
+
+    python3 -m venv venv
+    . venv/bin/activate
+
+Install package and dependencies in local environment
+
+    pip install .
+
+Use the `-e` option for linking package to sources (for development purposes)
+
+    pip install -e .
+
+
+### Handling Taxonomies
+
+List configured taxonomy keys and URIs
+
+    tagpack taxonomy
+
+Fetch and show concepts of a specific remote taxonomy (referenced by key)
+
+    tagpack taxonomy show entity
+
+Insert concepts from a remote taxonomy into Cassandra
+
+    tagpack taxonomy insert abuse
+
+Use the `-s / --setup-keyspace` (and `-k`) option to (re-)create the keyspace
+
+    tagpack taxonomy insert -s -k my_keyspace abuse
+
+### Validate a TagPack
+
+Validate a single TagPack file
+
+    tagpack validate packs/demo.yaml
+
+Recursively validate all TagPacks in (a) given folder(s).
+
+    tagpack validate packs/
+
+## Insert a TagPack into Cassandra
+
+Insert a single TagPack file or all TagPacks from a given folder
+
+    tagpack insert packs/demo.yaml
+    tagpack insert packs/
+
+Create a keyspace and insert all TagPacks from a given folder
+
+    tagpack insert -s -k dummy_keyspace packs/
+
+Optionally, you can specify the level of `concurrency` (default: 100) by using the `-c` parameter.
+
+    tagpack insert -c 500 -s -k dummy_keyspace packs/
+    
+
 [cassandra]: https://cassandra.apache.org/
 [yaml]: [https://yaml.org/]
-[dn-ca]: https://interpol-innovation-centre.github.io/DW-CC-Taxonomy/
+[dw-va]: https://github.com/INTERPOL-Innovation-Centre/DW-VA-Taxonomy
 
 

@@ -5,7 +5,7 @@ import sys
 import yaml
 
 
-TAGPACK_SCHEMA_FILE = 'conf/tagpack_schema.yaml'
+TAGPACK_SCHEMA_FILE = 'tagpack/conf/tagpack_schema.yaml'
 
 
 class ValidationError(Exception):

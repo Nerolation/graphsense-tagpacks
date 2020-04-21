@@ -62,9 +62,9 @@ def show_taxonomy_concepts(args):
     print_line(f"{len(taxonomy.concepts)} taxonomy concepts", 'success')
 
 
-def ingest_taxonomy(args):
+def insert_taxonomy(args):
     t0 = time.time()
-    print_line("Taxonomy ingestion starts")
+    print_line("Taxonomy insert starts")
     print(f"Taxonomy: {args.taxonomy}")
 
     print(f"Cassandra nodes: {args.db_nodes}")
@@ -73,6 +73,9 @@ def ingest_taxonomy(args):
     cassandra = Cassandra(args.db_nodes)
     try:
         cassandra.connect()
+        if args.setup_keyspace:
+            print_info(f"Setup keyspace {args.keyspace} in {args.db_nodes}")
+            cassandra.setup_keyspace(args.keyspace)
         if not cassandra.has_keyspace(args.keyspace):
             print(f"Keyspace {args.keyspace} does not exist. \
                   Please create manually first")
@@ -81,13 +84,16 @@ def ingest_taxonomy(args):
         taxonomy = remote_load_taxonomy(args.taxonomy)
         cassandra.insert_taxonomy(taxonomy, args.keyspace)
 
+        print(f"{taxonomy.key} | {taxonomy.uri}:", end=' ')
+        print_success(f"INSERTED")
+
         duration = round(time.time() - t0, 2)
         print_line(
             f"Inserted {len(taxonomy.concepts)} concepts in {duration}s",
             'success')
     except StorageError as e:
         print_fail(e)
-        print_line("Aborted ingest", 'fail')
+        print_line("Aborted insert", 'fail')
     finally:
         cassandra.close()
         sys.exit()
@@ -145,19 +151,16 @@ def validate_tagpack(args):
         except (ValidationError, TagPackFileError) as e:
             print_fail("FAILED", e)
 
-    if no_passed < len(tagpacks):
-        status = 'fail'
-    else:
-        status = 'success'
+    status = 'fail' if no_passed < len(tagpacks) else 'success'
 
     duration = round(time.time() - t0, 2)
-    print_line(
-        f"{no_passed}/{len(tagpacks)} TagPacks passed in {duration}s", status)
+    print_line("{}/{} TagPacks passed in {}s"
+               .format(no_passed, len(tagpacks), duration), status)
 
 
-def ingest_tagpack(args):
+def insert_tagpack(args):
     t0 = time.time()
-    print_line("TagPack ingestion starts")
+    print_line("TagPack insert starts")
     print(f"Path: {args.path}")
 
     print(f"Cassandra nodes: {args.db_nodes}")
@@ -165,6 +168,9 @@ def ingest_tagpack(args):
     cassandra = Cassandra(args.db_nodes)
     try:
         cassandra.connect()
+        if args.setup_keyspace:
+            print_info(f"Setup keyspace {args.keyspace} in {args.db_nodes}")
+            cassandra.setup_keyspace(args.keyspace)
         if not cassandra.has_keyspace(args.keyspace):
             print(f"Keyspace {args.keyspace} does not exist. \
                   Please create manually first")
@@ -176,7 +182,7 @@ def ingest_tagpack(args):
         sys.exit()
 
     schema = schema = TagPackSchema()
-    print(f"Loaded schema: {schema.definition}")
+    print_info(f"Loaded TagPack schema defintion: {schema.definition}")
 
     tagpacks = collect_tagpacks(args.path)
     print_info(f"Collected TagPacks: {len(tagpacks)}\n")
@@ -188,7 +194,7 @@ def ingest_tagpack(args):
         print(f'{tagpack_file}: ', end='')
         try:
             cassandra.insert_tagpack(tagpack, args.keyspace, args.concurrency)
-            print_success(f"INGESTED {len(tagpack.tags)} Tags")
+            print_success(f"INSERTED {len(tagpack.tags)} Tags")
             no_passed += 1
             no_tags = no_tags + len(tagpack.tags)
         except StorageError as e:
@@ -196,15 +202,11 @@ def ingest_tagpack(args):
 
     cassandra.close()
 
-    if no_passed < len(tagpacks):
-        status = 'fail'
-    else:
-        status = 'success'
+    status = 'fail' if no_passed < len(tagpacks) else 'success'
 
     duration = round(time.time() - t0, 2)
-    print_line(
-        "Ingested {}/{} TagPacks with {} Tags in {}s"
-        .format(no_passed, len(tagpacks), no_tags, duration), status)
+    print_line("Inserted {}/{} TagPacks with {} Tags in {}s"
+               .format(no_passed, len(tagpacks), no_tags, duration), status)
 
 
 def show_version():
@@ -228,9 +230,9 @@ def main():
 
     parser_t_subparsers = parser_t.add_subparsers(title='Taxonomy commands')
 
-    # parser for taxonomy ingest command
+    # parser for taxonomy insert command
     parser_t_i = parser_t_subparsers.add_parser(
-        'ingest', help='ingest taxonomy into GraphSense')
+        'insert', help='insert taxonomy into GraphSense')
     parser_t_i.add_argument('taxonomy', metavar='TAXONOMY_KEY',
                             help='the selected taxonomy')
     parser_t_i.add_argument('-d', '--db_nodes', nargs='+',
@@ -239,7 +241,9 @@ def main():
     parser_t_i.add_argument('-k', '--keyspace',
                             default=DEFAULT_KEYSPACE, metavar='KEYSPACE',
                             help="Cassandra keyspace for taxonomy tables")
-    parser_t_i.set_defaults(func=ingest_taxonomy)
+    parser_t_i.add_argument('-s', '--setup-keyspace', action='store_true',
+                            help="(Re-create) keyspace for TagPacks")
+    parser_t_i.set_defaults(func=insert_taxonomy)
 
     # parser for taxonomy show command
     parser_t_s = parser_t_subparsers.add_parser(
@@ -257,9 +261,9 @@ def main():
                           help='verbose configuration')
     parser_c.set_defaults(func=show_config)
 
-    # parser for ingest command
-    parser_i = subparsers.add_parser("ingest",
-                                     help="ingest TagPacks into GraphSense")
+    # parser for insert command
+    parser_i = subparsers.add_parser("insert",
+                                     help="insert TagPacks into GraphSense")
     parser_i.add_argument('path', nargs='+', metavar='PATH',
                           default=[os.getcwd()],
                           help='TagPacks file or folder root path')
@@ -272,7 +276,9 @@ def main():
     parser_i.add_argument('-c', '--concurrency', nargs='?', type=int,
                           default=CONCURRENCY,
                           help='Concurrent execution threshold)')
-    parser_i.set_defaults(func=ingest_tagpack)
+    parser_i.add_argument('-s', '--setup-keyspace', action='store_true',
+                          help="(Re-create) keyspace for TagPacks")
+    parser_i.set_defaults(func=insert_tagpack)
 
     # parser for validate command
     parser_v = subparsers.add_parser("validate", help="validate TagPacks")
@@ -295,7 +301,4 @@ if __name__ == '__main__':
 
     global CONFIG
     CONFIG = load_config()
-
-    # t0 = time.time()
     main()
-    # print('Total time:', time.time() - t0)

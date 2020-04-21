@@ -1,9 +1,9 @@
-DROP KEYSPACE IF EXISTS tagpacks;
+DROP KEYSPACE IF EXISTS KEYSPACE_NAME;
 
-CREATE KEYSPACE tagpacks
+CREATE KEYSPACE KEYSPACE_NAME
 WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 3 };
 
-USE tagpacks;
+USE KEYSPACE_NAME;
 
 
 CREATE TABLE tagpack_by_uri (
