@@ -262,10 +262,6 @@ Install package and dependencies in local environment
 
     pip install .
 
-Use the `-e` option for linking package to sources (for development purposes)
-
-    pip install -e .
-
 
 ### Handling Taxonomies
 
@@ -310,6 +306,24 @@ Optionally, you can specify the level of `concurrency` (default: 100) by using t
 
     tagpack insert -c 500 -s -k dummy_keyspace packs/
     
+## Development / Testing
+
+Use the `-e` option for linking package to sources (for development purposes)
+
+    pip install -e .
+
+OR install packages via `requirements.txt`
+
+    pip install -r requirements.txt
+
+Run tests
+
+    pytest
+
+Check test coverage
+
+    coverage run -m pytest
+    coverage report
 
 [cassandra]: https://cassandra.apache.org/
 [yaml]: [https://yaml.org/]

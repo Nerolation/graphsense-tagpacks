@@ -37,7 +37,7 @@ setup(
         "requests>=2.23.0",
         "pyyaml>=5.3.1",
         "tabulate>=0.8.7",
-        "cassandra_driver>=3.23.0"
+        "cassandra-driver>=3.23.0"
     ],
     test_suite="tests"
 )

@@ -1,3 +1,5 @@
+.coverage
+.travis.yml
 *.sublime*
 venv/
 tagpack.egg-info/
