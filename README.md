@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/graphsense/graphsense-tagpacks.svg?branch=dn-vc-taxonomy )](https://travis-ci.org/graphsense/graphsense-tagpacks)
+
 # GraphSense TagPacks
 
 A TagPack is a collection of cryptoasset attribution tags with associated
