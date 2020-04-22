@@ -32,8 +32,8 @@ class StorageError(Exception):
 class Cassandra(object):
     """Cassandra Backend Connector
 
-    Taxonomies and TagPacks can be ingested into Apache Cassandra#
-    for futher processing within GraphSense.
+    Taxonomies and TagPacks can be ingested into Apache Cassandra
+    for further processing within GraphSense.
 
     This class provides the necessary schema creation and data
     ingesting functions.
@@ -104,7 +104,7 @@ class Cassandra(object):
     def insert_tagpack(self, tagpack, keyspace, concurrency):
         """Insert a tagpack into a given keyspace"""
         if not self.session:
-            raise StorageError("Session not availble. Call connect() first")
+            raise StorageError("Session not available. Call connect() first")
         try:
             self.session.set_keyspace(keyspace)
 

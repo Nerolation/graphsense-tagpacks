@@ -182,7 +182,7 @@ def insert_tagpack(args):
         sys.exit()
 
     schema = schema = TagPackSchema()
-    print_info(f"Loaded TagPack schema defintion: {schema.definition}")
+    print_info(f"Loaded TagPack schema definition: {schema.definition}")
 
     tagpacks = collect_tagpacks(args.path)
     print_info(f"Collected TagPacks: {len(tagpacks)}\n")
